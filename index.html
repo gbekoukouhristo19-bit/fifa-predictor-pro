@@ -1,0 +1,188 @@
+
+<button class="secondary" onclick="exportHistory()">📥 EXPORTER L'HISTORIQUE</button>
+<button class="danger" onclick="clearHistory()">EFFACER L'HISTORIQUE</button>
+</div>
+</div>
+
+<script>
+const teams = {
+ fc24: [
+ "Arsenal","Chelsea","Liverpool","Manchester City",
+ "Manchester United","Tottenham","Newcastle United",
+ "Aston Villa","West Ham","Brighton","Everton",
+ "Wolves","Crystal Palace","Fulham","Brentford",
+ "Nottingham Forest","Bournemouth","Leicester City",
+ "Southampton","Ipswich Town"
+ ],
+ fc25: [
+ "Chelsea","Arsenal","Manchester United","Tottenham",
+ "Roma","Lazio","Fiorentina","Real Betis",
+ "Sevilla","Villarreal","Porto","Benfica",
+ "Ajax","PSV","Feyenoord","Lyon",
+ "Marseille","Nice","Eintracht Frankfurt",
+ "Leverkusen"
+ ],
+ fc26: [
+ "Real Madrid","Barcelona","Atletico Madrid",
+ "Manchester City","Liverpool","Arsenal",
+ "Chelsea","Bayern Munich","Dortmund","PSG",
+ "Inter Milan","AC Milan","Juventus","Napoli",
+ "Roma","Ajax","Benfica","Porto",
+ "Tottenham","Manchester United"
+ ]
+};
+
+let history = [];
+
+function loadTeams(){
+ const mode=document.getElementById("mode").value;
+ const h=document.getElementById("home");
+ const a=document.getElementById("away");
+ const hh=document.getElementById("histHome");
+ const ha=document.getElementById("histAway");
+
+ [h,a,hh,ha].forEach(s=>{
+  s.innerHTML="";
+  teams[mode].forEach(t=>{
+   s.add(new Option(t,t));
+  });
+ });
+ if(a.options.length>1) a.selectedIndex=1;
+ if(ha.options.length>1) ha.selectedIndex=1;
+}
+
+document.getElementById("mode").addEventListener("change",loadTeams);
+
+function poisson(lambda,k){
+ let p=Math.exp(-lambda);
+ for(let i=1;i<=k;i++)p*=lambda/i;
+ return p;
+}
+
+function predict(){
+ const home=document.getElementById("home").value;
+ const away=document.getElementById("away").value;
+
+ if(home===away){
+  alert("Choisis deux équipes différentes.");
+  return;
+ }
+
+ const mode=document.getElementById("mode").value;
+ const matches=history.filter(m=>m.mode===mode);
+
+ let homeGoals=1.45;
+ let awayGoals=1.20;
+
+ let homeCount=0,awayCount=0;
+
+ matches.forEach(m=>{
+  if(m.home===home){
+   homeGoals+=m.hg;
+   homeCount++;
+  }
+  if(m.away===away){
+   awayGoals+=m.ag;
+   awayCount++;
+  }
+ });
+
+ if(homeCount>0)homeGoals=homeGoals/(homeCount+1);
+ if(awayCount>0)awayGoals=awayGoals/(awayCount+1);
+
+ let matrix=[];
+ let p1=0,px=0,p2=0;
+ let scores=[];
+
+ for(let i=0;i<=6;i++){
+  for(let j=0;j<=6;j++){
+   let p=poisson(homeGoals,i)*poisson(awayGoals,j);
+   matrix.push({i,j,p});
+   if(i>j)p1+=p;
+   else if(i===j)px+=p;
+   else p2+=p;
+  }
+ }
+
+ let total=p1+px+p2;
+ p1/=total;px/=total;p2/=total;
+
+ scores=matrix.sort((a,b)=>b.p-a.p);
+
+ document.getElementById("output").style.display="block";
+ document.getElementById("match").textContent=home+" VS "+away;
+
+ document.getElementById("bestScore").textContent=
+ scores[0].i+" - "+scores[0].j;
+
+ document.getElementById("p1").textContent=(p1*100).toFixed(1)+"%";
+ document.getElementById("px").textContent=(px*100).toFixed(1)+"%";
+ document.getElementById("p2").textContent=(p2*100).toFixed(1)+"%";
+
+ document.getElementById("scores").innerHTML=
+ scores.slice(0,5).map(s=>
+ `<div class="history-item">
+ Score ${s.i} - ${s.j}
+ <strong>${(s.p/total*100).toFixed(2)}%</strong>
+ </div>`
+ ).join("");
+
+ document.getElementById("confidence").textContent=
+ "Modèle statistique indicatif. Les probabilités ne garantissent pas le résultat.";
+}
+
+function addResult(){
+ const home=document.getElementById("histHome").value;
+ const away=document.getElementById("histAway").value;
+ const hg=Number(document.getElementById("goalsHome").value);
+ const ag=Number(document.getElementById("goalsAway").value);
+
+ if(home===away || hg<0 || ag<0 || !Number.isInteger(hg) || !Number.isInteger(ag)){
+  alert("Vérifie les équipes et les scores.");
+  return;
+ }
+
+ history.unshift({
+  home,away,hg,ag,
+  mode:document.getElementById("mode").value
+ });
+
+ showHistory();
+ alert("Résultat enregistré !");
+}
+
+function showHistory(){
+ document.getElementById("history").innerHTML=
+ history.map(m=>
+ `<div class="history-item">
+ ${m.home} ${m.hg} - ${m.ag} ${m.away}
+ <span class="small">(${m.mode})</span>
+ </div>`
+ ).join("") || "Aucun match enregistré.";
+}
+
+function clearHistory(){
+ if(confirm("Effacer tout l'historique ?")){
+  history=[];
+  showHistory();
+ }
+}
+
+function exportHistory(){
+ const blob=new Blob(
+ [JSON.stringify(history,null,2)],
+ {type:"application/json"}
+ );
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;
+ a.download="fifa-history.json";
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+loadTeams();
+showHistory();
+</script>
+</body>
+</html>
