@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FIFA Intelligence Dashboard</title>
+<style>
+body{margin:0;background:#07101e;color:white;font-family:Arial;padding:18px}
+main{max-width:950px;margin:auto}
+h1,h2{color:#00e5a0}
+.card{background:#111e32;border:1px solid #293d59;padding:18px;border-radius:13px;margin:15px 0}
+select{width:100%;padding:13px;background:#081426;color:white;border:1px solid #38516f;border-radius:8px}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:#1b2d47;padding:16px;border-radius:10px}
+.stat strong{display:block;color:#00e5a0;font-size:25px;margin-top:8px}
+.item{padding:12px;border-bottom:1px solid #30445e}
+button{background:#00d99a;border:0;padding:13px;border-radius:8px;font-weight:bold;cursor:pointer}
+.small{color:#9db1ca;font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>⚽ FIFA INTELLIGENCE</h1>
+<p class="small">Performance • Classement • Statistiques</p>
+
+<div class="card">
+<h2>Championnat</h2>
+<select id="mode">
+<option value="fc24">FC24 4x4</option>
+<option value="fc25">FC25 3x3</option>
+<option value="fc26">FC26 5x5</option>
+</select>
+</div>
+
+<div class="card">
+<h2>Statistiques générales</h2>
+<div class="stats">
+<div class="stat">Matchs enregistrés<strong id="matches">0</strong></div>
+<div class="stat">Équipes<strong id="teams">0</strong></div>
+<div class="stat">Buts marqués<strong id="goals">0</strong></div>
+<div class="stat">Moyenne de buts<strong id="average">0</strong></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🏆 Classement des équipes</h2>
+<div id="ranking"></div>
+</div>
+
+<div class="card">
+<h2>🔥 Meilleures attaques</h2>
+<div id="attack"></div>
+</div>
+
+<div class="card">
+<h2>🛡️ Meilleures défenses</h2>
+<div id="defense"></div>
+</div>
+
+<div class="card">
+<h2>📈 Derniers résultats</h2>
+<div id="recent"></div>
+</div>
+
+<button onclick="refresh()">ACTUALISER LES STATISTIQUES</button>
+</main>
+
+<script>
+const defaults={
+ fc24:["Chelsea","Arsenal","Newcastle","West Ham","Burnley","Wolverhampton","Manchester City","Aston Villa","Bournemouth","Tottenham","Nottingham","Luton","Fulham","Everton","Brighton","Liverpool","Manchester United","Sheffield","Crystal Palace","Brentford"],
+ fc25:["Celta","Roma","Fiorentina","AZ Alkmaar","Fenerbahçe","Braga","West Ham","Nice","Lille","Chelsea","Bâle"],
+ fc26:["Porto","Arsenal","Barcelone","Dortmund","Juventus","Roma","Bayern","Real Madrid","Chelsea","PSG","Napoli","Manchester City"]
+};
+
+function read(key,fallback){
+ try{return JSON.parse(localStorage.getItem(key))||fallback}
+ catch(e){return fallback}
+}
+
+function refresh(){
+ let mode=document.getElementById("mode").value;
+ let teams=read("fifaTeams",defaults)[mode]||[];
+ let history=read("fifaHistory",[]);
+ let matches=history.filter(m=>m.mode===mode);
+
+ let table={};
+ teams.forEach(t=>{
+  table[t]={name:t,played:0,wins:0,draws:0,losses:0,goals:0,against:0,points:0};
+ });
+
+ matches.forEach(m=>{
+  if(!table[m.home]||!table[m.away])return;
+  let h=table[m.home],a=table[m.away];
+  h.played++;a.played++;
+  h.goals+=m.hg;h.against+=m.ag;
+  a.goals+=m.ag;a.against+=m.hg;
+
+  if(m.hg>m.ag){h.wins++;a.losses++;h.points+=3}
+  else if(m.hg<m.ag){a.wins++;h.losses++;a.points+=3}
+  else{h.draws++;a.draws++;h.points++;a.points++}
+ });
+
+ let list=Object.values(table);
+ let total=matches.length;
+ let goals=matches.reduce((s,m)=>s+m.hg+m.ag,0);
+
+ document.getElementById("matches").textContent=total;
+ document.getElementById("teams").textContent=teams.length;
+ document.getElementById("goals").textContent=goals;
+ document.getElementById("average").textContent=total?(goals/total).toFixed(2):"0";
+
+ list.sort((a,b)=>b.points-a.points||
+ (b.goals-b.against)-(a.goals-a.against));
+
+ document.getElementById("ranking").innerHTML=
+ list.map((t,i)=>`
+ <div class="item">
+ <b>${i+1}. ${t.name}</b>
+ <span style="float:right;color:#00e5a0">${t.points} pts</span>
+ <div class="small">${t.played} matchs • ${t.wins} V • ${t.draws} N • ${t.losses} D • Différence ${t.goals-t.against}</div>
+ </div>`).join("");
+
+ let byAttack=[...list].sort((a,b)=>
+ (b.played?b.goals/b.played:0)-(a.played?a.goals/a.played:0));
+
+ document.getElementById("attack").innerHTML=
+ byAttack.slice(0,5).map(t=>
+ `<div class="item">${t.name} — ${t.goals} buts</div>`
+ ).join("");
+
+ let byDefense=[...list].filter(t=>t.played>0)
+ .sort((a,b)=>a.against/b.played-b.against/a.played);
+
+ document.getElementById("defense").innerHTML=
+ byDefense.slice(0,5).map(t=>
+ `<div class="item">${t.name} — ${t.against} buts encaissés</div>`
+ ).join("")||"Aucune donnée disponible";
+
+ document.getElementById("recent").innerHTML=
+ matches.slice(0,10).map(m=>
+ `<div class="item">${m.home} ${m.hg} - ${m.ag} ${m.away}</div>`
+ ).join("")||"Aucun résultat enregistré";
+}
+
+document.getElementById("mode").addEventListener("change",refresh);
+refresh();
+</script>
+</body>
+</html>
