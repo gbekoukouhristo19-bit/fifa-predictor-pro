@@ -19,6 +19,11 @@ button{background:#00d99a;border:0;padding:13px;border-radius:8px;font-weight:bo
 .small{color:#9db1ca;font-size:12px}
 </style>
 </head>
+<div style="text-align:center; margin:20px;">
+  <a href="index.html" style="background:#2563eb;color:white;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold;">
+    ⚽ Retour au prédicteur FIFA
+  </a>
+</div>
 <body>
 <main>
 <h1>⚽ FIFA INTELLIGENCE</h1>
