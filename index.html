@@ -157,6 +157,12 @@ button:active{opacity:.7}
 </div>
 
 <div class="card">
+  <h2>🏆 5. CLASSEMENT DES ÉQUIPES</h2>
+  <p class="small">Classement selon les résultats enregistrés</p>
+  <div id="teamRanking"></div>
+</div>
+
+<div class="card">
 <h2>📚 5. HISTORIQUE</h2>
 <div id="history"></div>
 <button class="blue full" onclick="exportData()">📥 EXPORTER LES DONNÉES</button>
@@ -467,6 +473,63 @@ function addTeam(){
  alert("Équipe ajoutée avec succès !");
 }
 
+function renderRanking() {
+  const competition = mode();
+  const ranking = teams[competition].map(team => {
+    const s = getStats(team, competition);
+
+    return {
+      team,
+      played: s.played,
+      wins: s.wins,
+      draws: s.draws,
+      losses: s.losses,
+      goalsFor: s.scored,
+      goalsAgainst: s.conceded,
+      points: s.wins * 3 + s.draws,
+      difference: s.scored - s.conceded,
+      form: s.recent
+    };
+  });
+
+  ranking.sort((a, b) =>
+    b.points - a.points ||
+    b.difference - a.difference ||
+    b.goalsFor - a.goalsFor ||
+    a.team.localeCompare(b.team)
+  );
+
+  el("teamRanking").innerHTML = ranking.map((t, i) => `
+    <div class="item">
+      <b>${i + 1}. ${t.team}</b>
+      <span style="float:right;color:#00e5a0">
+        ${t.points} pts
+      </span>
+      <div class="small">
+        MJ: ${t.played} |
+        V: ${t.wins} |
+        N: ${t.draws} |
+        D: ${t.losses}
+      </div>
+      <div class="small">
+        BP: ${t.goalsFor} |
+        BC: ${t.goalsAgainst} |
+        Diff: ${t.difference}
+      </div>
+      <div class="small">
+        5 derniers matchs :
+        ${t.form.length
+          ? t.form.map(m => {
+              const gf = m.home === t.team ? m.hg : m.ag;
+              const ga = m.home === t.team ? m.ag : m.hg;
+              return gf > ga ? "🟢" : gf === ga ? "🟡" : "🔴";
+            }).join(" ")
+          : "Aucun match"}
+      </div>
+    </div>
+  `).join("");
+}
+
 function showHistory(){
  el("history").innerHTML=history.length?
  history.map(m=>`
@@ -475,6 +538,8 @@ function showHistory(){
  <div class="small">${m.mode} • ${new Date(m.date).toLocaleDateString()}</div>
  </div>`).join("")
  :'<div class="empty">Aucun résultat enregistré.</div>';
+
+renderRanking();
 }
 
 function clearHistory(){
