@@ -1,0 +1,482 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FIFA AI Predictor Pro</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#07101e;color:#fff;
+ font-family:Arial,sans-serif;padding:15px
+}
+.container{max-width:950px;margin:auto}
+header{text-align:center;padding:20px}
+header h1{color:#00e5a0;font-size:28px}
+header p{color:#9db1ca}
+.card{
+ background:#111e32;border:1px solid #293d59;
+ border-radius:14px;padding:18px;margin:15px 0
+}
+h2{color:#00e5a0;font-size:19px}
+h3{font-size:16px;margin-top:22px}
+label{display:block;margin:12px 0 7px;color:#b6c6da}
+input,select{
+ width:100%;padding:13px;border-radius:8px;
+ border:1px solid #38516f;background:#081426;
+ color:white;font-size:15px
+}
+button{
+ border:0;border-radius:8px;padding:13px;
+ background:#00d99a;color:#06151b;
+ font-weight:bold;cursor:pointer;margin-top:10px
+}
+button:active{opacity:.7}
+.full{width:100%}
+.blue{background:#315071;color:white}
+.red{background:#c94353;color:white}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{
+ background:#1b2d47;padding:13px;border-radius:9px;
+ text-align:center;font-size:12px
+}
+.stat strong{display:block;color:#00e5a0;font-size:22px;margin-top:8px}
+.score{text-align:center;font-size:45px;color:#00e5a0;font-weight:bold}
+.item{padding:12px;border-bottom:1px solid #30445e;font-size:14px}
+.small{font-size:12px;color:#9db1ca}
+.hidden{display:none}
+.tag{color:#00e5a0}
+.bar{height:9px;background:#293d59;border-radius:10px;overflow:hidden;margin-top:6px}
+.bar span{display:block;height:100%;background:#00d99a}
+.empty{text-align:center;color:#9db1ca;padding:15px}
+@media(max-width:550px){
+ .grid{grid-template-columns:1fr}
+ .stats{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+<h1>⚽ FIFA AI PREDICTOR PRO</h1>
+<p>Advanced Football Match Analysis</p>
+<p class="small">FC24 • FC25 • FC26</p>
+</header>
+
+<div class="card">
+<h2>⚙️ 1. CONFIGURATION</h2>
+
+<label>Choisir le championnat</label>
+<select id="mode">
+<option value="fc24">FC24 - England Championship 4x4</option>
+<option value="fc25">FC25 - Conference League 3x3</option>
+<option value="fc26">FC26 - Rush Superligue 5x5</option>
+</select>
+
+<div class="grid">
+<div>
+<label>Équipe domicile</label>
+<select id="home"></select>
+</div>
+<div>
+<label>Équipe extérieure</label>
+<select id="away"></select>
+</div>
+</div>
+
+<button class="full" onclick="analyze()">🔮 ANALYSER ET PRÉDIRE</button>
+</div>
+
+<div class="card" id="results" hidden>
+<h2>📊 2. ANALYSE DU MATCH</h2>
+<div id="matchTitle" style="text-align:center"></div>
+<div class="score" id="bestScore">0 - 0</div>
+<p class="small" style="text-align:center">Score exact le plus probable</p>
+
+<h3>Probabilités 1X2</h3>
+<div class="stats">
+<div class="stat">1 - DOMICILE<strong id="p1">0%</strong></div>
+<div class="stat">X - NUL<strong id="px">0%</strong></div>
+<div class="stat">2 - EXTÉRIEUR<strong id="p2">0%</strong></div>
+</div>
+
+<h3>Comparaison des équipes</h3>
+<div id="comparison"></div>
+
+<h3>Analyse des buts</h3>
+<div id="goalAnalysis"></div>
+
+<h3>Top 5 des scores exacts</h3>
+<div id="topScores"></div>
+
+<h3>Confrontations directes</h3>
+<div id="headToHead"></div>
+
+<h3>Derniers matchs</h3>
+<div id="recentMatches"></div>
+
+<p class="small" id="modelInfo"></p>
+</div>
+
+<div class="card">
+<h2>📝 3. ENREGISTRER UN MATCH</h2>
+
+<label>Équipe 1</label>
+<select id="recordHome"></select>
+
+<label>Équipe 2</label>
+<select id="recordAway"></select>
+
+<div class="grid">
+<div>
+<label>Score équipe 1</label>
+<input id="scoreHome" type="number" min="0" max="30" value="2">
+</div>
+<div>
+<label>Score équipe 2</label>
+<input id="scoreAway" type="number" min="0" max="30" value="1">
+</div>
+</div>
+
+<button class="full" onclick="saveMatch()">ENREGISTRER LE RÉSULTAT</button>
+</div>
+
+<div class="card">
+<h2>➕ 4. AJOUTER UNE ÉQUIPE</h2>
+<label>Nom de l'équipe</label>
+<input id="newTeam" placeholder="Exemple : Manchester United">
+<button class="full" onclick="addTeam()">AJOUTER L'ÉQUIPE</button>
+</div>
+
+<div class="card">
+<h2>📚 5. HISTORIQUE</h2>
+<div id="history"></div>
+<button class="blue full" onclick="exportData()">📥 EXPORTER LES DONNÉES</button>
+<button class="red full" onclick="clearHistory()">EFFACER L'HISTORIQUE</button>
+</div>
+
+<div class="card">
+<h2>💾 6. IMPORTER LES DONNÉES</h2>
+<p class="small">Récupère un fichier JSON précédemment exporté.</p>
+<input type="file" id="importFile" accept=".json">
+<button class="full" onclick="importData()">IMPORTER</button>
+</div>
+
+<footer class="small" style="text-align:center;padding:20px">
+FIFA AI PREDICTOR PRO • Statistical Model
+</footer>
+</div>
+
+<script>
+const DEFAULT_TEAMS={
+fc24:[
+"Chelsea","Arsenal","Newcastle","West Ham",
+"Burnley","Wolverhampton","Manchester City",
+"Aston Villa","Bournemouth","Tottenham",
+"Nottingham","Luton","Fulham","Everton",
+"Brighton","Liverpool","Manchester United",
+"Sheffield","Crystal Palace","Brentford"
+],
+fc25:[
+"Celta","Roma","Fiorentina","AZ Alkmaar",
+"Fenerbahçe","Braga","West Ham","Nice",
+"Lille","Chelsea","Bâle"
+],
+fc26:[
+"Porto","Arsenal","Barcelone","Dortmund",
+"Juventus","Roma","Bayern","Real Madrid",
+"Chelsea","PSG","Napoli","Manchester City"
+]
+};
+
+function load(key,fallback){
+ try{
+  let value=localStorage.getItem(key);
+  return value?JSON.parse(value):fallback;
+ }catch(e){return fallback;}
+}
+
+let teams=load("fifaTeams",DEFAULT_TEAMS);
+let history=load("fifaHistory",[]);
+
+function persist(){
+ localStorage.setItem("fifaTeams",JSON.stringify(teams));
+ localStorage.setItem("fifaHistory",JSON.stringify(history));
+}
+
+function mode(){return document.getElementById("mode").value;}
+function el(id){return document.getElementById(id);}
+
+function fillSelect(id,list,selected){
+ let s=el(id);
+ s.innerHTML="";
+ list.forEach(t=>s.add(new Option(t,t)));
+ if(selected && list.includes(selected))s.value=selected;
+}
+
+function refresh(){
+ let list=teams[mode()];
+ let oldHome=el("home").value;
+ let oldAway=el("away").value;
+ fillSelect("home",list,oldHome);
+ fillSelect("away",list,oldAway && oldAway!==oldHome?oldAway:list[1]);
+ fillSelect("recordHome",list);
+ fillSelect("recordAway",list,list[1]);
+}
+
+el("mode").addEventListener("change",refresh);
+
+function getStats(team,competition){
+ let matches=history.filter(m=>m.mode===competition);
+ let played=0,scored=0,conceded=0;
+ let wins=0,draws=0,losses=0;
+
+ let recent=matches.filter(m=>
+  m.home===team || m.away===team
+ ).slice(0,5);
+
+ matches.forEach(m=>{
+  let gf=null,ga=null;
+  if(m.home===team){gf=m.hg;ga=m.ag;}
+  else if(m.away===team){gf=m.ag;ga=m.hg;}
+  if(gf===null)return;
+
+  played++;
+  scored+=gf;
+  conceded+=ga;
+
+  if(gf>ga)wins++;
+  else if(gf===ga)draws++;
+  else losses++;
+ });
+
+ let points=0;
+ recent.forEach(m=>{
+  let gf=m.home===team?m.hg:m.ag;
+  let ga=m.home===team?m.ag:m.hg;
+  points+=gf>ga?3:gf===ga?1:0;
+ });
+
+ return {
+  played,scored,conceded,wins,draws,losses,
+  attack:played?scored/played:1.5,
+  defense:played?conceded/played:1.5,
+  recent,points
+ };
+}
+
+function poisson(mean,k){
+ let p=Math.exp(-mean);
+ for(let i=1;i<=k;i++)p*=mean/i;
+ return p;
+}
+
+function analyze(){
+ let h=el("home").value;
+ let a=el("away").value;
+ let competition=mode();
+
+ if(!h||!a||h===a){
+  alert("Choisis deux équipes différentes.");
+  return;
+ }
+
+ let H=getStats(h,competition);
+ let A=getStats(a,competition);
+
+ // Moyennes initiales, faute de résultats réels.
+ let lh=1.50;
+ let la=1.30;
+
+ if(H.played)lh=.75*H.attack+.25*1.50;
+ if(A.played)la=.75*A.attack+.25*1.30;
+
+ if(A.played)lh=.70*lh+.30*A.defense;
+ if(H.played)la=.70*la+.30*H.defense;
+
+ if(H.played>=2)lh*=1+(H.points/15-.30)*.10;
+ if(A.played>=2)la*=1+(A.points/15-.30)*.10;
+
+ lh=Math.max(.20,Math.min(6,lh));
+ la=Math.max(.20,Math.min(6,la));
+
+ let matrix=[],p1=0,px=0,p2=0;
+ let over25=0,btts=0,under25=0;
+
+ for(let i=0;i<=10;i++){
+  for(let j=0;j<=10;j++){
+   let p=poisson(lh,i)*poisson(la,j);
+   matrix.push({i,j,p});
+
+   if(i>j)p1+=p;
+   else if(i===j)px+=p;
+   else p2+=p;
+
+   if(i+j>=3)over25+=p;
+   else under25+=p;
+
+   if(i>0&&j>0)btts+=p;
+  }
+ }
+
+ let total=matrix.reduce((sum,x)=>sum+x.p,0);
+
+ p1/=total;px/=total;p2/=total;
+ over25/=total;under25/=total;btts/=total;
+
+ matrix.sort((x,y)=>y.p-x.p);
+
+ el("results").hidden=false;
+ el("matchTitle").textContent=h+" VS "+a;
+ el("bestScore").textContent=matrix[0].i+" - "+matrix[0].j;
+
+ el("p1").textContent=(p1*100).toFixed(1)+"%";
+ el("px").textContent=(px*100).toFixed(1)+"%";
+ el("p2").textContent=(p2*100).toFixed(1)+"%";
+
+ el("comparison").innerHTML=`
+ <div class="item">${h} : ${H.wins} victoires, ${H.draws} nuls, ${H.losses} défaites</div>
+ <div class="item">${a} : ${A.wins} victoires, ${A.draws} nuls, ${A.losses} défaites</div>
+ <div class="item">Moyenne de buts : ${h} ${lh.toFixed(2)} / ${a} ${la.toFixed(2)}</div>
+ `;
+
+ el("goalAnalysis").innerHTML=`
+ <div class="item">Plus de 2,5 buts : <b>${(over25*100).toFixed(1)}%</b></div>
+ <div class="item">Moins de 2,5 buts : <b>${(under25*100).toFixed(1)}%</b></div>
+ <div class="item">Les deux équipes marquent : <b>${(btts*100).toFixed(1)}%</b></div>
+ `;
+
+ el("topScores").innerHTML=matrix.slice(0,5).map(x=>
+ `<div class="item">${x.i} - ${x.j}
+ <b style="float:right">${(x.p/total*100).toFixed(2)}%</b></div>`
+ ).join("");
+
+ let direct=history.filter(m=>m.mode===competition&&
+ ((m.home===h&&m.away===a)||(m.home===a&&m.away===h))
+ );
+
+ el("headToHead").innerHTML=direct.length?
+ direct.slice(0,10).map(m=>
+ `<div class="item">${m.home} ${m.hg} - ${m.ag} ${m.away}</div>`
+ ).join(""):"Aucune confrontation enregistrée.";
+
+ let recentH=H.recent.slice(0,5).map(m=>
+ `<div class="item">${m.home} ${m.hg} - ${m.ag} ${m.away}</div>`
+ ).join("");
+
+ let recentA=A.recent.slice(0,5).map(m=>
+ `<div class="item">${m.home} ${m.hg} - ${m.ag} ${m.away}</div>`
+ ).join("");
+
+ el("recentMatches").innerHTML=
+ `<b>${h}</b>${recentH||'<div class="item">Aucun match enregistré</div>'}
+ <b>${a}</b>${recentA||'<div class="item">Aucun match enregistré</div>'}`;
+
+ el("modelInfo").textContent=
+ "Modèle de Poisson indicatif. Matchs historiques utilisés : "+
+ (H.played+A.played)+". Les probabilités ne garantissent pas le résultat.";
+}
+
+function saveMatch(){
+ let h=el("recordHome").value;
+ let a=el("recordAway").value;
+ let hg=Number(el("scoreHome").value);
+ let ag=Number(el("scoreAway").value);
+
+ if(!h||!a||h===a||!Number.isInteger(hg)||
+ !Number.isInteger(ag)||hg<0||ag<0||hg>30||ag>30){
+  alert("Vérifie les équipes et les scores.");
+  return;
+ }
+
+ history.unshift({
+  mode:mode(),home:h,away:a,hg,ag,
+  date:new Date().toISOString()
+ });
+
+ persist();
+ showHistory();
+ alert("Résultat enregistré !");
+}
+
+function addTeam(){
+ let name=el("newTeam").value.trim();
+ if(!name)return alert("Entre un nom d'équipe.");
+
+ if(teams[mode()].some(t=>t.toLowerCase()===name.toLowerCase())){
+  alert("Cette équipe existe déjà.");
+  return;
+ }
+
+ teams[mode()].push(name);
+ persist();
+ el("newTeam").value="";
+ refresh();
+ alert("Équipe ajoutée avec succès !");
+}
+
+function showHistory(){
+ el("history").innerHTML=history.length?
+ history.map(m=>`
+ <div class="item">
+ <b>${m.home} ${m.hg} - ${m.ag} ${m.away}</b>
+ <div class="small">${m.mode} • ${new Date(m.date).toLocaleDateString()}</div>
+ </div>`).join("")
+ :'<div class="empty">Aucun résultat enregistré.</div>';
+}
+
+function clearHistory(){
+ if(!confirm("Effacer tout l'historique ?"))return;
+ history=[];
+ persist();
+ showHistory();
+}
+
+function exportData(){
+ let data={teams,history};
+ let blob=new Blob([JSON.stringify(data,null,2)],{
+  type:"application/json"
+ });
+ let url=URL.createObjectURL(blob);
+ let a=document.createElement("a");
+ a.href=url;
+ a.download="fifa-predictor-data.json";
+ a.click();
+ URL.revokeObjectURL(url);
+}
+
+function importData(){
+ let file=el("importFile").files[0];
+ if(!file)return alert("Sélectionne un fichier JSON.");
+
+ let reader=new FileReader();
+ reader.onload=()=>{
+  try{
+   let data=JSON.parse(reader.result);
+   if(!data.teams||!data.history||
+   !["fc24","fc25","fc26"].every(k=>Array.isArray(data.teams[k]))||
+   !Array.isArray(data.history)){
+    throw new Error("Format invalide");
+   }
+   teams=data.teams;
+   history=data.history;
+   persist();
+   refresh();
+   showHistory();
+   alert("Données importées !");
+  }catch(e){
+   alert("Fichier invalide ou incompatible.");
+  }
+ };
+ reader.readAsText(file);
+}
+
+refresh();
+showHistory();
+</script>
+</body>
+</html>
