@@ -321,6 +321,8 @@ function getStats(team, competition) {
 }
 
 function analyze(){
+const comparison = el("comparison");
+if (comparison) comparison.innerHTML = "";
  let h=el("home").value;
  let a=el("away").value;
  let competition=mode();
